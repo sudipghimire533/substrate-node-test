@@ -1,20 +1,44 @@
-use crate::{mock::*, Error};
+use crate::mock::*;
 use frame_support::{assert_noop, assert_ok};
 
 #[test]
-fn it_works_for_default_value() {
+fn expected_to_rollback() {
 	new_test_ext().execute_with(|| {
-		// Dispatch a signed extrinsic.
-		assert_ok!(TemplateModule::do_something(Origin::signed(1), 42));
-		// Read pallet storage and assert an expected result.
-		assert_eq!(TemplateModule::something(), Some(42));
-	});
+		// Let's first set both storage to value 10
+		assert_ok!(TemplateModule::change_both_passing(Origin::signed(1), 10));
+
+		// Ensure both are as expected
+		assert_eq!(10, TemplateModule::get_first_storage());
+		assert_eq!(10, TemplateModule::get_second_storage());
+
+		// Call an mid-failing tx
+		// it should fail with an error
+		assert!(TemplateModule::change_both_failing(Origin::signed(1), 20).is_err());
+
+		// We expect the transaction to rollback
+		// so both storage should be 10 still
+		assert_eq!(10, TemplateModule::get_first_storage());
+		assert_eq!(10, TemplateModule::get_second_storage());
+	})
 }
 
 #[test]
-fn correct_error_for_none_value() {
+fn expected_to_not_rollback() {
 	new_test_ext().execute_with(|| {
-		// Ensure the expected error is thrown when no value is present.
-		assert_noop!(TemplateModule::cause_error(Origin::signed(1)), Error::<Test>::NoneValue);
-	});
+		// Let's first set both storage to value 10
+		assert_ok!(TemplateModule::change_both_passing(Origin::signed(1), 10));
+
+		// Ensure both are as expected
+		assert_eq!(10, TemplateModule::get_first_storage());
+		assert_eq!(10, TemplateModule::get_second_storage());
+
+		// Call an mid-failing tx
+		// it should fail with an error
+		assert!(TemplateModule::change_both_failing(Origin::signed(1), 20).is_err());
+
+		// We expect the transaction to rollback
+		// so both storage should be 10 still
+		assert_eq!(20, TemplateModule::get_first_storage());
+		assert_eq!(10, TemplateModule::get_second_storage());
+	})
 }
